@@ -2,6 +2,34 @@ from django.db import models
 from django.conf import settings
 from socket import socket
 import datetime, struct, ssl, binascii, json, base64
+from django.contrib.auth.models import User
+
+APPLE_LIVE = "gateway.push.apple.com"
+APPLE_LIVE_FB = "feedback.push.apple.com"
+APPLE_SANDBOX = "gateway.sandbox.push.apple.com"
+APPLE_SANDBOX_FB = "feedback.sandbox.push.apple.com"
+
+class Cert(models.Model):
+    user = models.ForeignKey(User)
+    _live = models.TextField(blank=True)
+    _dev = models.TextField(blank=True)
+
+    def set_live(self, cert):
+        self._live = base64.encodestring(cert)
+
+    def get_live(self):
+        return base64.decodestring(self._live)
+
+    def set_dev(self, cert):
+        self._dev = base64.encodestring(cert)
+
+    def get_dev(self):
+        return base64.decodestring(self._dev)
+
+    live = property(get_live, set_live)
+    dev = property(get_dev, set_dev)
+
+
 
 class Device(models.Model):
     udid = models.CharField(blank=False, max_length=64)
@@ -17,13 +45,13 @@ class Device(models.Model):
 
     def _getPushServer(self):
         if self.test_device and self.ios:
-            return settings.APPLE_SANDBOX
+            return APPLE_SANDBOX
         elif self.ios:
-            return settings.APPLE_LIVE
+            return APPLE_LIVE
         elif self.test_device and not self.ios:
-            return settings.GOOGLE_SANDBOX
+            raise NotImplementedError
         else:
-            return settings.GOOGLE_LIVE
+            raise NotImplementedError
 
     def _getPushCertificate(self):
         if self.test_device:
@@ -34,22 +62,6 @@ class Device(models.Model):
     def send_push(self, alert, badge=0, sound="chime",
                         custom_params={}, action_loc_key=None, loc_key=None,
                         loc_args=[], passed_socket=None):
-        """
-        Send a message to an iPhone using the APN server, returns whether
-        it was successful or not.
-
-        alert - The message you want to send
-        badge - Numeric badge number you wish to show, 0 will clear it
-        sound - chime is shorter than default! Replace with None/"" for no sound
-        sandbox - Are you sending to the sandbox or the live server
-        custom_params - A dict of custom params you want to send
-        action_loc_key - As per APN docs
-        loc_key - As per APN docs
-        loc_args - As per APN docs, make sure you use a list
-        passed_socket - Rather than open/close a socket, use an already open one
-
-        See http://developer.apple.com/iphone/library/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/ApplePushService/ApplePushService.html
-        """
         aps_payload = {}
 
         alert_payload = alert
@@ -79,7 +91,7 @@ class Device(models.Model):
 
         # Check we're not oversized
         if len(s_payload) > 256:
-            raise OverflowError, 'The JSON generated is too big at %d - *** "%s" ***' % (len(s_payload), s_payload)
+            raise OverflowError, 'The JSON generated is too damn big man: %d - *** "%s" ***' % (len(s_payload), s_payload)
 
         fmt = "!cH32sH%ds" % len(s_payload)
         command = '\x00'
@@ -99,18 +111,11 @@ class Device(models.Model):
         return True
 
     def __unicode__(self):
-        return u"The Device id is: %s" % self.udid
+        return u"The Device UDID is: %s" % self.udid
 
 def sendMessageToPhoneGroup(phone_list, alert, badge=0, sound="chime",
                             custom_params={}, action_loc_key=None, loc_key=None,
                             loc_args=[], sandbox=False):
-    """
-    See the syntax for send_push, the only difference is this opens
-    one socket to send them all.
-
-    The caller must ensure that all phones are the same sandbox level
-    otherwise it'll end up sending messages to the wrong service.
-    """
     host_name = None
     cert_path = None
 
@@ -135,7 +140,7 @@ def sendMessageToPhoneGroup(phone_list, alert, badge=0, sound="chime",
     c.close()
 
 def doFeedbackLoop(sandbox = False):
-    #doesn't do anything yet, but should mark feedback for retunred items
+    #doesn't do anything yet, but should mark feedback for returned items
     raise NotImplementedError
 
     if sandbox:
