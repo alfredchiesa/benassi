@@ -121,6 +121,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.admindocs',
+    'push'
 )
 
 # Apple Push Settings
@@ -128,6 +129,9 @@ APPLE_LIVE = "gateway.push.apple.com"
 APPLE_LIVE_FB = "feedback.push.apple.com"
 APPLE_SANDBOX = "gateway.sandbox.push.apple.com"
 APPLE_SANDBOX_FB = "feedback.sandbox.push.apple.com"
+
+APPLE_LIVE_CERT = os.path.join(PROJECT_ROOT, "iphone_live.pem")
+APPLE_SANDBOX_CERT = os.path.join(PROJECT_ROOT, "iphone_ck.pem")
 
 # Google Push Settings
 GOOGLE_LIVE = ""

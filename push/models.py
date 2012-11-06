@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from socket import socket
-import datetime, struct, ssl, binascii, json
+import datetime, struct, ssl, binascii, json, base64
 
 class Device(models.Model):
     udid = models.CharField(blank=False, max_length=64)
@@ -27,9 +27,9 @@ class Device(models.Model):
 
     def _getPushCertificate(self):
         if self.test_device:
-            return settings.IPHONE_SANDBOX_APN_PUSH_CERT
+            return settings.APPLE_SANDBOX_CERT
         else:
-            return settings.IPHONE_LIVE_APN_PUSH_CERT
+            return settings.APPLE_LIVE_CERT
 
     def send_push(self, alert, badge=0, sound="chime",
                         custom_params={}, action_loc_key=None, loc_key=None,
@@ -116,10 +116,10 @@ def sendMessageToPhoneGroup(phone_list, alert, badge=0, sound="chime",
 
     if sandbox:
         host_name = settings.APPLE_SANDBOX
-        cert_path = settings.IPHONE_SANDBOX_APN_PUSH_CERT
+        cert_path = settings.APPLE_SANDBOX_CERT
     else:
         host_name = settings.APPLE_LIVE
-        cert_path = settings.IPHONE_LIVE_APN_PUSH_CERT
+        cert_path = settings.APPLE_LIVE_CERT
 
     s = socket()
     c = ssl.wrap_socket(s,
@@ -140,10 +140,10 @@ def doFeedbackLoop(sandbox = False):
 
     if sandbox:
         host_name = settings.APPLE_SANDBOX_FB
-        cert_path = settings.IPHONE_SANDBOX_APN_PUSH_CERT
+        cert_path = settings.APPLE_SANDBOX_CERT
     else:
         host_name = settings.APPLE_LIVE_FB
-        cert_path = settings.IPHONE_LIVE_APN_PUSH_CERT
+        cert_path = settings.APPLE_LIVE_CERT
 
     s = socket()
     c = ssl.wrap_socket(s,
